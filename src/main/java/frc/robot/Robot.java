@@ -6,9 +6,10 @@ package frc.robot;
 
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.DutyCycleOut;
+import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 
+import edu.wpi.first.wpilibj.PS4Controller;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.XboxController;
 
@@ -19,12 +20,11 @@ import edu.wpi.first.wpilibj.XboxController;
  * project.
  */
 public class Robot extends TimedRobot {
-  private final TalonFX m_fx = new TalonFX(0, "canivore");
-  private final DutyCycleOut m_output = new DutyCycleOut(0);
+  private final TalonFX m_frontRightDriveMotor = new TalonFX(21);
+  private final VoltageOut m_output = new VoltageOut(0).withEnableFOC(false);
+  private double m_voltage = 0;
 
-  private final CurrentLimitsConfigs m_currentLimits = new CurrentLimitsConfigs();
-
-  private final XboxController m_joystick = new XboxController(0);
+  private final PS4Controller m_joystick = new PS4Controller(0);
   
 
   int printCount = 0;
@@ -34,43 +34,18 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
-    /* Configure the Talon FX to use a supply limit of 60 amps IF we exceed 80 amps for over 0.1 seconds */
-    TalonFXConfiguration toConfigure = new TalonFXConfiguration();
-    m_currentLimits.SupplyCurrentLimit = 60; // Limit to 1 amps
-    m_currentLimits.SupplyCurrentThreshold = 80; // If we exceed 4 amps
-    m_currentLimits.SupplyTimeThreshold = 0.1; // For at least 0.1 seconds
-    m_currentLimits.SupplyCurrentLimitEnable = true; // And enable it
-
-    m_currentLimits.StatorCurrentLimit = 120; // Limit stator current to 120 amps
-    m_currentLimits.StatorCurrentLimitEnable = true; // And enable it
-
-    toConfigure.CurrentLimits = m_currentLimits;
-
-    m_fx.getConfigurator().apply(toConfigure);
   }
 
   @Override
   public void robotPeriodic() {
-    /* Tie output of joystick to output of motor for current limit testing */
-    m_fx.setControl(m_output.withOutput(m_joystick.getLeftY()));
-
-    if (m_joystick.getAButtonPressed()) {
-      /* Toggle the supply limit enable */
-      m_currentLimits.SupplyCurrentLimitEnable ^= true;
-      System.out.println("Setting supply limit to " + m_currentLimits.SupplyCurrentLimitEnable);
-      m_fx.getConfigurator().apply(m_currentLimits);
-    }
-    if (m_joystick.getBButtonPressed()) {
-      /* Toggle the stator limit enable */
-      m_currentLimits.StatorCurrentLimitEnable ^= true;
-      System.out.println("Setting stator limit to " + m_currentLimits.StatorCurrentLimitEnable);
-      m_fx.getConfigurator().apply(m_currentLimits);
+    if (m_joystick.getL3Button()) {
+      m_voltage += 0.01;
+      System.out.println(m_voltage);
+      m_frontRightDriveMotor.setControl(m_output.withOutput(m_voltage));
     }
 
-    if (printCount++ > 20) {
-      printCount= 0;
-      System.out.println("Supply current: " + m_fx.getSupplyCurrent());
-      System.out.println("Stator current: " + m_fx.getStatorCurrent());
+    if (m_joystick.getL3ButtonReleased()) {
+      m_frontRightDriveMotor.stopMotor();
     }
   }
 
