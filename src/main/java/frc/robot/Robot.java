@@ -4,8 +4,6 @@
 
 package frc.robot;
 
-import java.util.ArrayList;
-
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.controls.VoltageOut;
@@ -26,9 +24,8 @@ public class Robot extends TimedRobot {
   private final VoltageOut m_output = new VoltageOut(0).withEnableFOC(false);
   private double m_voltage = 0;
 
-  private StatusSignal<Double> m_drivePosition = m_frontRightDriveMotor.getPosition();
   private StatusSignal<Double> m_steerPosition = m_frontRightSteerMotor.getPosition();
-  private ArrayList<Double> m_coupleRatioReadings = new ArrayList<Double>(100);
+  private double m_steerStartingPosition;
 
   private final PS4Controller m_joystick = new PS4Controller(0);
 
@@ -38,8 +35,8 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
-    System.out.println("Drive Position: " + m_drivePosition.getValue());
-    System.out.println("Steer Position: " + m_steerPosition.getValue());
+    BaseStatusSignal.refreshAll(m_steerPosition);
+    m_steerStartingPosition = m_steerPosition.getValue();
   }
 
   @Override
@@ -84,25 +81,9 @@ public class Robot extends TimedRobot {
     if (m_joystick.getCircleButtonPressed()) {
       m_frontRightSteerMotor.setControl(m_output.withOutput(2));
     }
-
-    if (m_joystick.getCircleButton()) {
-      BaseStatusSignal.refreshAll(m_drivePosition, m_steerPosition);
-      double coupleRatio = m_drivePosition.getValue() / m_steerPosition.getValue();
-      m_coupleRatioReadings.add(coupleRatio);
-      System.out.println(coupleRatio);
-    }
-
-    if (m_joystick.getCircleButtonReleased()) {
+    m_steerPosition.refresh();
+    if (m_joystick.getCircleButtonReleased() || m_steerPosition.getValue() > m_steerStartingPosition * 2) {
       m_frontRightSteerMotor.stopMotor();
-      
-      int i = 0;
-      double mean = 0;
-      for (Double coupleRatio : m_coupleRatioReadings) {
-        mean += coupleRatio;
-        i++;
-      }
-      mean /= i;
-      System.out.println("Mean couple ratio is " + mean);
     }
   }
 
