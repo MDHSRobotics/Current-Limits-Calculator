@@ -4,8 +4,6 @@
 
 package frc.robot;
 
-import com.ctre.phoenix6.BaseStatusSignal;
-import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 
@@ -19,13 +17,13 @@ import edu.wpi.first.wpilibj.TimedRobot;
  * project.
  */
 public class Robot extends TimedRobot {
+  private final TalonFX m_frontLeftDriveMotor = new TalonFX(23);
   private final TalonFX m_frontRightDriveMotor = new TalonFX(21);
-  private final TalonFX m_frontRightSteerMotor = new TalonFX(20);
+  private final TalonFX m_backLeftDriveMotor = new TalonFX(17);
+  private final TalonFX m_backRightDriveMotor = new TalonFX(19);
+
   private final VoltageOut m_output = new VoltageOut(0).withEnableFOC(false);
   private double m_voltage = 0;
-
-  private StatusSignal<Double> m_steerPosition = m_frontRightSteerMotor.getPosition();
-  private double m_steerStartingPosition;
 
   private final PS4Controller m_joystick = new PS4Controller(0);
 
@@ -35,8 +33,11 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
-    BaseStatusSignal.refreshAll(m_steerPosition);
-    m_steerStartingPosition = m_steerPosition.getValue();
+    System.out.println("You are now running the slip current test. The robot should already be touching a wall.");
+    System.out.println("If the wheels are not facing the wall, either run a SwerveRequest.PointWheelsAt from a different program, or turn off the robot and manually align the wheels.");
+    System.out.println("Connect to the Phoenix Diagnostics server with AdvantageScope, and graph all drive motor velocities and stator currents.");
+    System.out.println("Then hold the cross button on the PS4 Controller until at least one velocity becomes non-zero and at least one stator current drops.");
+    System.out.println("This is your slip current limit.");
   }
 
   @Override
@@ -68,22 +69,18 @@ public class Robot extends TimedRobot {
     // Slip current test
     if (m_joystick.getCrossButton()) {
       m_voltage += 0.01;
-      System.out.println(m_voltage);
+      m_frontLeftDriveMotor.setControl(m_output.withOutput(m_voltage));
       m_frontRightDriveMotor.setControl(m_output.withOutput(m_voltage));
+      m_backLeftDriveMotor.setControl(m_output.withOutput(m_voltage));
+      m_backRightDriveMotor.setControl(m_output.withOutput(m_voltage));
     }
 
-    if (m_joystick.getL3ButtonReleased()) {
+    if (m_joystick.getCrossButtonReleased()) {
+      m_frontLeftDriveMotor.stopMotor();
       m_frontRightDriveMotor.stopMotor();
+      m_backLeftDriveMotor.stopMotor();
+      m_backRightDriveMotor.stopMotor();
       m_voltage = 0;
-    }
-
-    // Couple ratio test
-    if (m_joystick.getCircleButtonPressed()) {
-      m_frontRightSteerMotor.setControl(m_output.withOutput(2));
-    }
-    m_steerPosition.refresh();
-    if (m_joystick.getCircleButtonReleased() || m_steerPosition.getValue() > m_steerStartingPosition * 2) {
-      m_frontRightSteerMotor.stopMotor();
     }
   }
 
